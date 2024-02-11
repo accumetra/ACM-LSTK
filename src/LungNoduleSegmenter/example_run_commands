@@ -1,11 +1,11 @@
 
 # If you type these commands in the build directory (and the build directory is in the same directory as the LungNoduleSegmenter directory) you will get the results shown.
 
-./LungNoduleSegmentation --InputDICOMDir "../../data/E00140/" --Seeds 3 -62 66 -91.5 --MaximumRadius 12.0 --Visualize 1 --Outline 1 --Screenshot nodule_image --Supersample 1 --SupersampledIsotropicSpacing .2 --WriteFeatureImages 1 --OutputMesh E00140.N1.vtp
+./LungNoduleSegmentation --InputDICOMDir "../../data/E00140/" --Seeds 3 -62 66 -91.5 --MaximumRadius 12.0 --Visualize 1 --Outline 1 --Screenshot . --Supersample 1 --SupersampledIsotropicSpacing .2 --WriteFeatureImages 1 --OutputMesh E00140.N1.vtp
 Computed Volume = 95.462177 mm^3
 Bringing up visualization..
 
-./LungNoduleSegmentation --InputDICOMDir "../../data/E00140/" --Seeds 3 -46.8 -56.3 -91.4 --MaximumRadius 12.0 --Visualize 1 --Outline 1 --Screenshot nodule_image --Supersample 1 --SupersampledIsotropicSpacing .2 --WriteFeatureImages 1 --OutputMesh E00140.N2.vtp
+./LungNoduleSegmentation --InputDICOMDir "../../data/E00140/" --Seeds 3 -46.8 -56.3 -91.4 --MaximumRadius 12.0 --Visualize 1 --Outline 1 --Screenshot . --Supersample 1 --SupersampledIsotropicSpacing .2 --WriteFeatureImages 1 --OutputMesh E00140.N2.vtp
 Computed Volume = 50.39867 mm^3
 Bringing up visualization..
 
