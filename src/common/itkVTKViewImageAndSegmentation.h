@@ -16,6 +16,7 @@
 #include "vtkPolyDataMapper.h"
 #include "itkImageToVTKImageFilter.h"
 #include "vtkMassProperties.h"
+#include "itkTriDimensionalMeasurementCalculator.h"
 #include "vtkCutPlaneWidget.h"
 #include <string>
 
@@ -65,9 +66,18 @@ public:
 	};*/
 	void SetSegmentationRenderMode(SegmentationRenderMode);
 
+  // For nodule lengths
+  using NoduleSizerType = itk::TriDimensionalMeasurementCalculator< ImageType >;
+
+  /** Get the sizer from which various nodule lengths can be retrieved */
+  NoduleSizerType *Sizer() { return m_NoduleLengths; }
+
 protected:
   VTKViewImageAndSegmentation();
 	virtual ~VTKViewImageAndSegmentation() override;
+
+  // compute tridimensional lengths
+  void ComputeNoduleLengths();
 
 	using ImageITK2VTKType = itk::ImageToVTKImageFilter< ImageType >;
 	ImageType::Pointer m_Image;
@@ -84,6 +94,8 @@ protected:
 	vtkSmartPointer< vtkActor > m_SurfaceActor;
 	SegmentationRenderMode m_SegmentationRenderMode;
 	double m_Volume;
+
+  typename NoduleSizerType::Pointer m_NoduleLengths;
 
 private:
 };
