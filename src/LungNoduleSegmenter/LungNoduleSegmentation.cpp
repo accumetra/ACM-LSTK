@@ -338,7 +338,25 @@ int main( int argc, char * argv[] )
 		view->SetSegmentationRenderMode(args.GetOptionWasSet("Outline") ?
 			itk::VTKViewImageAndSegmentation::SegmentationRenderMode::Outline :
 			itk::VTKViewImageAndSegmentation::SegmentationRenderMode::Surface);
-		std::cout << "Computed Volume = " << std::setprecision(8) << (view->GetVolume()) << " mm^3" << std::endl;
+		std::cout << "Volume = " << std::fixed << std::setprecision(2) << (view->GetVolume()) << " mm^3" << std::endl;
+
+		std::cout << "TriDimensional = "
+              << view->Sizer()->GetRECISTLength()
+              << " x "
+              << view->Sizer()->GetRECISTPerpLength()
+              << " x "
+              << view->Sizer()->GetRECISTZLength()
+              << " mm" << std::endl;
+
+    std::cout << "Nodule span along the X,Y,Z axes are " <<
+      (view->Sizer()->GetBBox()->GetMaximum() - view->Sizer()->GetBBox()->GetMinimum()) << " mm." << std::endl;
+
+    std::cout << "  RECIST measure endpoints are " << view->Sizer()->GetRECISTEndPoint1() << " to " << view->Sizer()->GetRECISTEndPoint2() << std::endl;
+    std::cout << "  RECIST Perp measure endpoints are " << view->Sizer()->GetRECISTPerpEndPoint1() << " to " << view->Sizer()->GetRECISTPerpEndPoint2() << std::endl;
+    std::cout << "  RECIST Z measure endpoints are " << view->Sizer()->GetRECISTZEndPoint1() << " to " << view->Sizer()->GetRECISTZEndPoint2() << std::endl;
+    std::cout << "  Nodule bounds along the X,Y,Z axes are from " << (view->Sizer()->GetBBox()->GetMinimum())
+      << " to " << (view->Sizer()->GetBBox()->GetMaximum()) << " mm." << std::endl;
+
 		if (args.GetOptionWasSet("OutputMesh"))
 			view->WriteSegmentationAsSurface(args.GetValueAsString("OutputMesh").c_str());
 

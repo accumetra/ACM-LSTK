@@ -72,6 +72,7 @@ namespace itk
 		m_Image = nullptr;
 		m_Mask = nullptr;
 		m_SegmentationRenderMode = VTKViewImageAndSegmentation::SegmentationRenderMode::Surface;
+    m_NoduleLengths = NoduleSizerType::New();
 	}
 
 	VTKViewImageAndSegmentation::~VTKViewImageAndSegmentation()
@@ -98,6 +99,8 @@ namespace itk
 		m_SurfaceProperties->SetInputData(m_Surface);
 		m_SurfaceProperties->Update();
 		m_Volume = m_SurfaceProperties->GetVolume();
+
+    ComputeNoduleLengths();
 	}
 
 	void VTKViewImageAndSegmentation::SetSegmentationSurfaceFromBinaryMask(
@@ -124,7 +127,16 @@ namespace itk
 		mc->Update();
 		m_Surface = vtkSmartPointer< vtkPolyData >::New();
 		m_Surface->DeepCopy(mc->GetOutput());
+
+    ComputeNoduleLengths();
 	}
+
+	void VTKViewImageAndSegmentation::ComputeNoduleLengths()
+	{
+		m_NoduleLengths->SetSurface(m_Surface);
+    m_NoduleLengths->SetImage(m_Image);
+    m_NoduleLengths->Update();
+  }
 
 	void VTKViewImageAndSegmentation::SetSegmentationSurface(vtkPolyData *pd)
 	{
@@ -134,6 +146,8 @@ namespace itk
 		m_SurfaceProperties->SetInputData(m_Surface);
 		m_SurfaceProperties->Update();
 		m_Volume = m_SurfaceProperties->GetVolume();
+
+    ComputeNoduleLengths();
 	}
 
 	int VTKViewImageAndSegmentation::View()
@@ -205,7 +219,7 @@ namespace itk
 
 		VTK_CREATE(vtkProperty, noduleProperty);
 
-		// Changed the color of the rendered nodule to be red 
+		// Changed the color of the rendered nodule to be red
 		// and with much less specular highlights.
 		noduleProperty->SetAmbient(0.3);
 		noduleProperty->SetDiffuse(0.6);
@@ -296,7 +310,7 @@ namespace itk
 	}
 
 	void VTKViewImageAndSegmentation::WriteSegmentationAsSurface( const std::string &fn )
-	{		
+	{
 		vtkSmartPointer< vtkXMLPolyDataWriter > w = vtkSmartPointer< vtkXMLPolyDataWriter >::New();
 		w->SetInputData(m_Surface);
 		w->SetFileName(fn.c_str());
