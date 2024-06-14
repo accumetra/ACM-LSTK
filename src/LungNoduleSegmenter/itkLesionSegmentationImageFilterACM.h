@@ -138,7 +138,7 @@ public:
   itkBooleanMacro( UseVesselEnhancingDiffusion );
 
   typedef itk::LandmarkSpatialObject< ImageDimension >    SeedSpatialObjectType;
-  typedef typename SeedSpatialObjectType::PointListType   PointListType;
+  typedef typename SeedSpatialObjectType::LandmarkPointListType   PointListType;
 
   void SetSeeds( PointListType p ) { this->m_Seeds = p; }
   PointListType GetSeeds() { return m_Seeds; }
@@ -217,7 +217,7 @@ private:
   typename CommandType::Pointer                       m_CommandObserver;
   RegionType                                          m_RegionOfInterest;
   std::string                                         m_StatusMessage;
-  typename SeedSpatialObjectType::PointListType       m_Seeds;
+  PointListType                                       m_Seeds;
   typename InputImageSpatialObjectType::Pointer       m_InputSpatialObject;
   bool                                                m_ResampleThickSliceData;
   double                                              m_AnisotropyThreshold;
