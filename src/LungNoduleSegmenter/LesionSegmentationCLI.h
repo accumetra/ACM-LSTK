@@ -34,7 +34,7 @@ public:
   typedef itk::Image< float, ImageDimension > RealImageType;
 
   typedef itk::LandmarkSpatialObject< 3 >    SeedSpatialObjectType;
-  typedef SeedSpatialObjectType::PointListType   PointListType;
+  typedef SeedSpatialObjectType::LandmarkPointListType   PointListType;
 
   LesionSegmentationCLI( int argc, char *argv[] ) : MetaCommand()
   {
@@ -120,8 +120,10 @@ public:
       seeds[0];
       for (int i = 0; i < 3; i++)
         {
-        this->ROI[2*i] = seeds[0].GetPosition()[i] - this->GetValueAsFloat("MaximumRadius");
-        this->ROI[2*i+1] = seeds[0].GetPosition()[i] + this->GetValueAsFloat("MaximumRadius");
+        // Get Position Doesn't work in ITK 5.3.0, so we need to use the GetPositionInObjectSpace method
+        // There is also a GetPositionInWorldSpace method, but in my testing, that caused a segfault.
+        this->ROI[2*i] = seeds[0].GetPositionInObjectSpace()[i] - this->GetValueAsFloat("MaximumRadius");
+        this->ROI[2*i+1] = seeds[0].GetPositionInObjectSpace()[i] + this->GetValueAsFloat("MaximumRadius");
         }
       }
     return this->ROI;
@@ -153,6 +155,8 @@ public:
     PointListType seeds(nb_of_markers);
     for (unsigned int i = 0; i < nb_of_markers; i++)
       {
+      // Each seed needs a spatial object in ITK 5.3.0 this is new from 4.13.0
+      seeds[i].SetSpatialObject(SeedSpatialObjectType::New());
       double sx = (double)atof((*fit).c_str());
       ++fit;
       double sy = (double)atof((*fit).c_str());
@@ -255,9 +259,11 @@ public:
             indexSeed << " does not lie within the image. The images extents are"
           << this->m_Image->GetBufferedRegion() << std::endl;
         exit(-1);
-        }      
-
-      seeds[i].SetPosition(sx,sy,sz);
+        }
+      // SetPosition() was replaced by SetPositionInObjectSpace() and SetPositionInWorldSpace() in ITK 5.3.0
+      // We are using SetPositionInObjectSpace() here because SetPositionInWorldSpace() caused a segfault in my testing.
+      // This also passes the test dicom provided.
+      seeds[i].SetPositionInObjectSpace(pointSeed);
       }
     return seeds;
     }

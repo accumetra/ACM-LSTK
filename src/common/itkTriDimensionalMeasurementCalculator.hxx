@@ -44,8 +44,8 @@ TriDimensionalMeasurementCalculator<TImage>
 
   /********************************************/
   /*                                          */
-  /* Measure RECIST and ortho diameters on    */
-  /* the X-Y plane.                           */
+  /* Measure RECIST (longest diameter) and    */
+  /* perpendicular diameter on the X-Y plane. */
   /*                                          */
   /********************************************/
   m_Surface->GetBounds(bnds);
@@ -273,6 +273,7 @@ TriDimensionalMeasurementCalculator<TImage>
     }
   }
 
+  // Compute the outer bounding box of the nodule segmentation
   PointType pmin, pmax;
   for (int i = 0; i < 3; ++i)
   {
