@@ -342,20 +342,38 @@ int main( int argc, char * argv[] )
 
 		std::cout << "Tri-dimensional measurement = "
                   << " [" 
-                  << view->Sizer()->GetRECISTLength() << " x "
-                  << view->Sizer()->GetRECISTPerpLength() << " x "
-                  << view->Sizer()->GetRECISTZLength() 
+                  << view->Sizer()->GetRECISTXYLength() << " x "
+                  << view->Sizer()->GetRECISTXYPerpLength() << " x "
+                  << view->Sizer()->GetRECISTXYZLength() 
+                  << "] mm" << std::endl;
+
+                double maxzlength = 0.0;
+
+                if( view->Sizer()->GetRECISTXZLength() > view->Sizer()->GetRECISTYZLength() )
+                {
+                   maxzlength = view->Sizer()->GetRECISTXZLength();
+                }
+                else
+                {
+                   maxzlength = view->Sizer()->GetRECISTYZLength();
+                }
+
+		std::cout << "Tri-dimensional measurement v2 = "
+                  << " [" 
+                  << view->Sizer()->GetRECISTXYLength() << " x "
+                  << view->Sizer()->GetRECISTXYPerpLength() << " x "
+                  << maxzlength
                   << "] mm" << std::endl;
 
                 std::cout << "3D bounding box measurement = " <<
                  (view->Sizer()->GetBBox()->GetMaximum() - view->Sizer()->GetBBox()->GetMinimum()) << " mm" << std::endl;
 
-                std::cout << "  RECIST measure endpoints are " << view->Sizer()->GetRECISTEndPoint1() 
-                  << " to " << view->Sizer()->GetRECISTEndPoint2() << " mm" << std::endl;
-                std::cout << "  RECIST Perp measure endpoints are " << view->Sizer()->GetRECISTPerpEndPoint1() 
-                  << " to " << view->Sizer()->GetRECISTPerpEndPoint2() << " mm" << std::endl;
-                std::cout << "  RECIST Z measure endpoints are " << view->Sizer()->GetRECISTZEndPoint1() 
-                  << " to " << view->Sizer()->GetRECISTZEndPoint2() << " mm" << std::endl;
+                std::cout << "  RECIST measure endpoints are " << view->Sizer()->GetRECISTXYEndPoint1() 
+                  << " to " << view->Sizer()->GetRECISTXYEndPoint2() << " mm" << std::endl;
+                std::cout << "  RECIST Perp measure endpoints are " << view->Sizer()->GetRECISTXYPerpEndPoint1() 
+                  << " to " << view->Sizer()->GetRECISTXYPerpEndPoint2() << " mm" << std::endl;
+                std::cout << "  RECIST Z measure endpoints are " << view->Sizer()->GetRECISTXYZEndPoint1() 
+                  << " to " << view->Sizer()->GetRECISTXYZEndPoint2() << " mm" << std::endl;
                 std::cout << "  Nodule bounds along the X,Y,Z axes are from " << (view->Sizer()->GetBBox()->GetMinimum())
                   << " to " << (view->Sizer()->GetBBox()->GetMaximum()) << " mm" << std::endl;
 
