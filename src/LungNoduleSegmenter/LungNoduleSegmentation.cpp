@@ -349,13 +349,18 @@ int main( int argc, char * argv[] )
 
                 double maxzlength = 0.0;
 
+                InputImageType::PointType zEndPoints[2];
                 if( view->Sizer()->GetRECISTXZLength() > view->Sizer()->GetRECISTYZLength() )
                 {
                    maxzlength = view->Sizer()->GetRECISTXZLength();
+                   zEndPoints[0] = view->Sizer()->GetRECISTXZEndPoint1();
+                   zEndPoints[1] = view->Sizer()->GetRECISTXZEndPoint2();
                 }
                 else
                 {
                    maxzlength = view->Sizer()->GetRECISTYZLength();
+                   zEndPoints[0] = view->Sizer()->GetRECISTYZEndPoint1();
+                   zEndPoints[1] = view->Sizer()->GetRECISTYZEndPoint2();
                 }
 
 		std::cout << "Tri-dimensional measurement v2 = "
@@ -374,6 +379,8 @@ int main( int argc, char * argv[] )
                   << " to " << view->Sizer()->GetRECISTXYPerpEndPoint2() << " mm" << std::endl;
                 std::cout << "  RECIST Z measure endpoints are " << view->Sizer()->GetRECISTXYZEndPoint1() 
                   << " to " << view->Sizer()->GetRECISTXYZEndPoint2() << " mm" << std::endl;
+                std::cout << "  RECIST Z measure v2 endpoints are " << zEndPoints[0]
+                          << " to " << zEndPoints[1] << " mm" << std::endl;
                 std::cout << "  Nodule bounds along the X,Y,Z axes are from " << (view->Sizer()->GetBBox()->GetMinimum())
                   << " to " << (view->Sizer()->GetBBox()->GetMaximum()) << " mm" << std::endl;
 
