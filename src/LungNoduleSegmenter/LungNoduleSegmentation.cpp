@@ -344,7 +344,7 @@ int main( int argc, char * argv[] )
                   << " [" 
                   << view->Sizer()->GetRECISTXYLength() << " x "
                   << view->Sizer()->GetRECISTXYPerpLength() << " x "
-                  << view->Sizer()->GetRECISTXYZLength() 
+                  << view->Sizer()->GetRECISTZLength() 
                   << "] mm" << std::endl;
 
                 double maxzlength = 0.0;
@@ -363,30 +363,34 @@ int main( int argc, char * argv[] )
                    zEndPoints[1] = view->Sizer()->GetRECISTYZEndPoint2();
                 }
 
+                /*
 		std::cout << "Tri-dimensional measurement v2 = "
                   << " [" 
                   << view->Sizer()->GetRECISTXYLength() << " x "
                   << view->Sizer()->GetRECISTXYPerpLength() << " x "
                   << maxzlength
                   << "] mm" << std::endl;
+                */
 
                 std::cout << "3D bounding box measurement = " <<
                  (view->Sizer()->GetBBox()->GetMaximum() - view->Sizer()->GetBBox()->GetMinimum()) << " mm" << std::endl;
 
-                std::cout << "  RECIST measure endpoints are " << view->Sizer()->GetRECISTXYEndPoint1() 
+                std::cout << "  Bidimensional max line endpoints are: " << view->Sizer()->GetRECISTXYEndPoint1() 
                   << " to " << view->Sizer()->GetRECISTXYEndPoint2() << " mm" << std::endl;
-                std::cout << "  RECIST Perp measure endpoints are " << view->Sizer()->GetRECISTXYPerpEndPoint1() 
+                std::cout << "  Bidimensional max perpendicular line endpoints are: " << view->Sizer()->GetRECISTXYPerpEndPoint1() 
                   << " to " << view->Sizer()->GetRECISTXYPerpEndPoint2() << " mm" << std::endl;
-                std::cout << "  RECIST Z measure endpoints are " << view->Sizer()->GetRECISTXYZEndPoint1() 
+                std::cout << "  Tridimensional max Z line endpoints are: " << view->Sizer()->GetRECISTZEndPoint1() << " to "
+                          << view->Sizer()->GetRECISTZEndPoint2() << " mm" << std::endl;
+
+                /*
+                std::cout << "  Tridiemnsional Z measure endpoints are: " << view->Sizer()->GetRECISTXYZEndPoint1() 
                   << " to " << view->Sizer()->GetRECISTXYZEndPoint2() << " mm" << std::endl;
-                std::cout << "  RECIST Z measure v2 endpoints are " << zEndPoints[0]
+                std::cout << "  Tridiemnsional Z measure v2 endpoints are " << zEndPoints[0]
                           << " to " << zEndPoints[1] << " mm" << std::endl;
+                */
+
                 std::cout << "  Nodule bounds along the X,Y,Z axes are from " << (view->Sizer()->GetBBox()->GetMinimum())
                   << " to " << (view->Sizer()->GetBBox()->GetMaximum()) << " mm" << std::endl;
-
-                std::cout << "RECIST Z = " << view->Sizer()->GetRECISTZLength() << " mm from "
-                          << view->Sizer()->GetRECISTZEndPoint1() << " to "
-                          << view->Sizer()->GetRECISTZEndPoint2() << " mm" << std::endl;
 
                 if (args.GetOptionWasSet("OutputMesh"))
                   view->WriteSegmentationAsSurface(args.GetValueAsString("OutputMesh").c_str());
