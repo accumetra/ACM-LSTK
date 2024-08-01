@@ -8,6 +8,9 @@
 #include "itkImage.h"
 #include "vtkPolyData.h"
 #include "itkBoundingBox.h"
+#include "vtkCellLocator.h"
+#include "vtkSmartPointer.h"
+#include <tuple>
 
 namespace itk
 {
@@ -57,19 +60,28 @@ public:
   itkGetMacro( RECISTXYZEndPoint2, PointType );
   itkGetMacro( RECISTXYZLength, double );
 
-  itkGetObjectMacro( BBox, BoundingBox<> );
+  itkGetMacro(RECISTZEndPoint1, PointType);
+  itkGetMacro(RECISTZEndPoint2, PointType);
+  itkGetMacro(RECISTZLength, double);
+
+  itkGetObjectMacro(BBox, BoundingBox<>);
 
   // must be set
-  void SetSurface( vtkPolyData *pd ) { m_Surface = pd; }
-  void SetImage( TImage *i ) { m_Image = i; }
+  void SetSurface(vtkPolyData *pd) { m_Surface = pd; }
+  void SetImage(TImage *i) { m_Image = i; }
 
 protected:
   TriDimensionalMeasurementCalculator() : m_Image(NULL) {}
   ~TriDimensionalMeasurementCalculator() {}
 
-  double 		m_RECISTXYLength;
-  double 		m_RECISTXZLength;
-  double 		m_RECISTYZLength;
+  void ComputeRECISTZ();
+
+  std::tuple<double, PointType, PointType> IntersectSurfaceWithLine(PointType p1, PointType p2);
+
+  double m_RECISTXYLength;
+  double m_RECISTXZLength;
+  double m_RECISTYZLength;
+  double m_RECISTZLength;
 
   double 		m_RECISTXYPerpLength;
   double 		m_RECISTXZPerpLength;
@@ -85,10 +97,14 @@ protected:
   PointType m_RECISTXYZEndPoint1, m_RECISTXYZEndPoint2;
   PointType m_RECISTXYIntersection;
 
+  PointType m_RECISTZEndPoint1, m_RECISTZEndPoint2;
+
   TImage *m_Image;
   vtkPolyData *m_Surface;
 
   BoundingBox<>::Pointer m_BBox;
+
+  vtkSmartPointer<vtkCellLocator> m_CellLocator;
 
 private:
   TriDimensionalMeasurementCalculator(const TriDimensionalMeasurementCalculator&);  // Not implemented.

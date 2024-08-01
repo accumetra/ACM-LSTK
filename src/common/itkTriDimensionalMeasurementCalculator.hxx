@@ -8,12 +8,10 @@ Copyright (c) 2014 itkumetra, LLC
 
 #include "itkTriDimensionalMeasurementCalculator.h"
 #include "vtkCutter.h"
-#include "vtkSmartPointer.h"
 #include "vtkDoubleArray.h"
 #include "vtkPointData.h"
 #include "vtkPlane.h"
 #include "vtkLine.h"
-#include "vtkCellLocator.h"
 #include "vtkCell.h"
 #include "vtkMath.h"
 
@@ -370,9 +368,9 @@ TriDimensionalMeasurementCalculator<TImage>
   //   std::cout << "BiDimensional measure does not intersect" << std::endl;
 
   // Intersect the mesh along the 3D line
-  vtkSmartPointer< vtkCellLocator > cellLocator = vtkSmartPointer< vtkCellLocator >::New();
-  cellLocator->SetDataSet(m_Surface);
-  cellLocator->BuildLocator();
+  m_CellLocator = vtkSmartPointer<vtkCellLocator>::New();
+  m_CellLocator->SetDataSet(m_Surface);
+  m_CellLocator->BuildLocator();
 
   // A line through the RECIST intersection point along Z
   memcpy(p1, m_RECISTXYIntersection.GetDataPointer(), 3 * sizeof(double));
@@ -382,7 +380,7 @@ TriDimensionalMeasurementCalculator<TImage>
 
   // find intersection along the above Z line
   vtkSmartPointer<vtkIdList> cellIds = vtkSmartPointer<vtkIdList>::New();
-  cellLocator->FindCellsAlongLine(p1, p2, 0.0001, cellIds);
+  m_CellLocator->FindCellsAlongLine(p1, p2, 0.0001, cellIds);
 
   m_RECISTXYZLength = 0;
   std::vector< PointType > intersectionPts;
@@ -438,6 +436,152 @@ TriDimensionalMeasurementCalculator<TImage>
   m_BBox = BoundingBox<>::New();
   m_BBox->SetMinimum(pmin);
   m_BBox->SetMaximum(pmax);
+
+  ComputeRECISTZ();
+}
+
+template <class TImage>
+void TriDimensionalMeasurementCalculator<TImage>::ComputeRECISTZ()
+{
+  m_RECISTZLength = 0;
+
+  const int nSurfacePoints = m_Surface->GetNumberOfPoints();
+  if (nSurfacePoints < 2)
+    return;
+
+  const PointType origin = m_Image->GetOrigin();
+  PointType p1, p2;
+  const SpacingType spacing = m_Image->GetSpacing();
+  typename RegionType::IndexType index, indexStart, indexEnd;
+
+  // Measure Z (longest diameter) for any Z ray intersecting with the nodule surface
+  double bounds[6];
+  m_Surface->GetBounds(bounds);
+  p1[2] = bounds[4] - 1;
+  p2[2] = bounds[5] + 1;
+
+  for (unsigned int i = 0; i < 2; ++i)
+  {
+    indexStart[i] = std::floor((bounds[2 * i] - origin[i]) / spacing[i]);
+    indexEnd[i] = std::ceil((bounds[2 * i + 1] - origin[i]) / spacing[i]);
+  }
+
+  for (index[1] = indexStart[1]; index[1] <= indexEnd[1]; ++index[1])
+  {
+    for (index[0] = indexStart[0]; index[0] <= indexEnd[0]; ++index[0])
+    {
+
+      // Z ray to intersect with
+      for (unsigned int i = 0; i < 2; ++i)
+      {
+        p1[i] = p2[i] = (double)(index[i]) * spacing[i] + origin[i];
+      }
+
+      vtkSmartPointer<vtkIdList> cellIds = vtkSmartPointer<vtkIdList>::New();
+      m_CellLocator->FindCellsAlongLine(
+          p1.GetDataPointer(), p2.GetDataPointer(), 0.0001, cellIds);
+
+      std::vector<PointType> intersectionPts;
+
+      for (vtkIdType q = 0; q < cellIds->GetNumberOfIds(); q++)
+      {
+
+        // Retrieve the cell that was intersected
+        vtkIdType cellId = cellIds->GetId(q);
+        vtkCell *cell = m_Surface->GetCell(cellId);
+
+        // Verify again by intersecting the specific cell that it really intersected.
+        // Also get the intersection point x.
+        double t, x[3], pcoords[3];
+        int subId;
+        if (cell->IntersectWithLine(p1.GetDataPointer(), p2.GetDataPointer(), 0.0001, t, x, pcoords, subId))
+        {
+          PointType intersectionPt;
+          for (int a = 0; a < 3; ++a)
+            intersectionPt[a] = x[a];
+          intersectionPts.push_back(intersectionPt);
+        }
+      }
+
+      // intersectionPts contains the intersetions of the segmentation surface with
+      // the line along the Z axis that passes through this XY index
+      if (intersectionPts.size() >= 2)
+      {
+        // find the farthest 2 intersections.
+        for (unsigned int q = 0; q < intersectionPts.size() - 1; ++q)
+        {
+          for (unsigned int r = 1; r < intersectionPts.size(); ++r)
+          {
+            const double dist = (intersectionPts[q] - intersectionPts[r]).GetNorm();
+            if (m_RECISTZLength < dist)
+            {
+              m_RECISTZLength = dist;
+              m_RECISTZEndPoint1 = intersectionPts[q];
+              m_RECISTZEndPoint2 = intersectionPts[r];
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+template <class TImage>
+std::tuple<double, typename TImage::PointType, typename TImage::PointType>
+TriDimensionalMeasurementCalculator<TImage>::IntersectSurfaceWithLine(PointType p1, PointType p2)
+{
+  vtkSmartPointer<vtkIdList> cellIds = vtkSmartPointer<vtkIdList>::New();
+  m_CellLocator->FindCellsAlongLine(
+      p1.GetDataPointer(), p2.GetDataPointer(), 0.0001, cellIds);
+
+  std::vector<PointType> intersectionPts;
+
+  for (vtkIdType q = 0; q < cellIds->GetNumberOfIds(); q++)
+  {
+
+    // Retrieve the cell that was intersected
+    vtkIdType cellId = cellIds->GetId(q);
+    vtkCell *cell = m_Surface->GetCell(cellId);
+
+    // Verify again by intersecting the specific cell that it really intersected.
+    // Also get the intersection point x.
+    double t, x[3], pcoords[3];
+    int subId;
+    if (cell->IntersectWithLine(p1.GetDataPointer(), p2.GetDataPointer(), 0.0001, t, x, pcoords, subId))
+    {
+      PointType intersectionPt;
+      for (int a = 0; a < 3; ++a)
+        intersectionPt[a] = x[a];
+      intersectionPts.push_back(intersectionPt);
+    }
+  }
+
+  double distMax = 0;
+  PointType endPoint1, endPoint2;
+  endPoint1.Fill(0);
+  endPoint2.Fill(0);
+
+  // intersectionPts contains the intersetions of the segmentation surface with
+  // the line along the Z axis that passes through this XY index
+  if (intersectionPts.size() >= 2)
+  {
+    // find the farthest 2 intersections.
+    for (unsigned int q = 0; q < intersectionPts.size() - 1; ++q)
+    {
+      for (unsigned int r = 1; r < intersectionPts.size(); ++r)
+      {
+        const double dist = (intersectionPts[q] - intersectionPts[r]).GetNorm();
+        if (distMax < dist)
+        {
+          distMax = dist;
+          endPoint1 = intersectionPts[q];
+          endPoint2 = intersectionPts[r];
+        }
+      }
+    }
+  }
+
+  return {distMax, endPoint1, endPoint2};
 }
 
 } // end namespace itk

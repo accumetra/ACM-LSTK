@@ -384,17 +384,21 @@ int main( int argc, char * argv[] )
                 std::cout << "  Nodule bounds along the X,Y,Z axes are from " << (view->Sizer()->GetBBox()->GetMinimum())
                   << " to " << (view->Sizer()->GetBBox()->GetMaximum()) << " mm" << std::endl;
 
-		if (args.GetOptionWasSet("OutputMesh"))
-			view->WriteSegmentationAsSurface(args.GetValueAsString("OutputMesh").c_str());
+                std::cout << "RECIST Z = " << view->Sizer()->GetRECISTZLength() << " mm from "
+                          << view->Sizer()->GetRECISTZEndPoint1() << " to "
+                          << view->Sizer()->GetRECISTZEndPoint2() << " mm" << std::endl;
 
-  		// Set the screenshot directory
-  		if( !args.GetValueAsString("Screenshot").empty() )
-  		{
-		    view->SetScreenshotFilename( args.GetValueAsString("Screenshot") );
-  		}
+                if (args.GetOptionWasSet("OutputMesh"))
+                  view->WriteSegmentationAsSurface(args.GetValueAsString("OutputMesh").c_str());
 
-		return view->View();
-	}
+                // Set the screenshot directory
+                if (!args.GetValueAsString("Screenshot").empty())
+                {
+                  view->SetScreenshotFilename(args.GetValueAsString("Screenshot"));
+    }
+
+    return view->View();
+  }
 
   return EXIT_SUCCESS;
 }
