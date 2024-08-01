@@ -31,6 +31,7 @@ public:
   typedef typename TImage::SizeType SizeType;
   typedef typename TImage::IndexType IndexType;
   typedef typename TImage::PointType PointType;
+  typedef typename PointType::VectorType VectorType;
   typedef typename TImage::SpacingType SpacingType;
   typedef typename TImage::RegionType RegionType;
 

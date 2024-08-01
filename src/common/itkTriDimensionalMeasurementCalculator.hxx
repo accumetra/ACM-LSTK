@@ -109,12 +109,8 @@ TriDimensionalMeasurementCalculator<TImage>
         if (d > recistXY)
         {
           recistXY = d;
-          this->m_RECISTXYEndPoint1[0] = p1[0];
-          this->m_RECISTXYEndPoint1[1] = p1[1];
-          this->m_RECISTXYEndPoint1[2] = p1[2];
-          this->m_RECISTXYEndPoint2[0] = p2[0];
-          this->m_RECISTXYEndPoint2[1] = p2[1];
-          this->m_RECISTXYEndPoint2[2] = p2[2];
+          this->m_RECISTXYEndPoint1 = PointType(p1);
+          this->m_RECISTXYEndPoint2 = PointType(p2);
           this->m_RECISTXYLength = sqrt(recistXY);
           biggestContourSoFar = true;
         }
@@ -174,12 +170,8 @@ TriDimensionalMeasurementCalculator<TImage>
             if (d > recistXYPerp)
             {
               recistXYPerp = d;
-              this->m_RECISTXYPerpEndPoint1[0] = p1[0];
-              this->m_RECISTXYPerpEndPoint1[1] = p1[1];
-              this->m_RECISTXYPerpEndPoint1[2] = p1[2];
-              this->m_RECISTXYPerpEndPoint2[0] = p2[0];
-              this->m_RECISTXYPerpEndPoint2[1] = p2[1];
-              this->m_RECISTXYPerpEndPoint2[2] = p2[2];
+              this->m_RECISTXYPerpEndPoint1 = PointType(p1);
+              this->m_RECISTXYPerpEndPoint2 = PointType(p2);
               this->m_RECISTXYPerpLength = sqrt(recistXYPerp);
             }
           }
@@ -245,12 +237,8 @@ TriDimensionalMeasurementCalculator<TImage>
         if (d > recistXZ)
         {
           recistXZ = d;
-          this->m_RECISTXZEndPoint1[0] = p1[0];
-          this->m_RECISTXZEndPoint1[1] = p1[1];
-          this->m_RECISTXZEndPoint1[2] = p1[2];
-          this->m_RECISTXZEndPoint2[0] = p2[0];
-          this->m_RECISTXZEndPoint2[1] = p2[1];
-          this->m_RECISTXZEndPoint2[2] = p2[2];
+          this->m_RECISTXZEndPoint1 = PointType(p1);
+          this->m_RECISTXZEndPoint2 = PointType(p2);
           this->m_RECISTXZLength = sqrt(recistXZ);
           biggestXZContourSoFar = true;
         }
@@ -320,12 +308,8 @@ TriDimensionalMeasurementCalculator<TImage>
         if (d > recistYZ)
         {
           recistYZ = d;
-          this->m_RECISTYZEndPoint1[0] = p1[0];
-          this->m_RECISTYZEndPoint1[1] = p1[1];
-          this->m_RECISTYZEndPoint1[2] = p1[2];
-          this->m_RECISTYZEndPoint2[0] = p2[0];
-          this->m_RECISTYZEndPoint2[1] = p2[1];
-          this->m_RECISTYZEndPoint2[2] = p2[2];
+          this->m_RECISTYZEndPoint1 = PointType(p1);
+          this->m_RECISTYZEndPoint2 = PointType(p2);
           this->m_RECISTYZLength = sqrt(recistYZ);
           biggestYZContourSoFar = true;
         }
@@ -356,9 +340,7 @@ TriDimensionalMeasurementCalculator<TImage>
     m_RECISTXYPerpEndPoint2.GetDataPointer(), 0.001, t, x, pcoords, subId );
 
   // The point of intersetion of the in-plane bi-dimensional measure.
-  m_RECISTXYIntersection[0] = x[0];
-  m_RECISTXYIntersection[1] = x[1];
-  m_RECISTXYIntersection[2] = x[2];
+  m_RECISTXYIntersection = PointType(x);
 
   // std::cout << "RECIST measure endpoints are " << m_RECISTXYEndPoint1 << " to " << m_RECISTXYEndPoint2 << std::endl;
   // std::cout << "RECIST Perp measure endpoints are " << m_RECISTXYPerpEndPoint1 << " to " << m_RECISTXYPerpEndPoint2 << std::endl;
@@ -373,56 +355,17 @@ TriDimensionalMeasurementCalculator<TImage>
   m_CellLocator->BuildLocator();
 
   // A line through the RECIST intersection point along Z
-  memcpy(p1, m_RECISTXYIntersection.GetDataPointer(), 3 * sizeof(double));
-  memcpy(p2, m_RECISTXYIntersection.GetDataPointer(), 3 * sizeof(double));
-  p1[2] -= 100;
-  p2[2] += 100;
-
-  // find intersection along the above Z line
-  vtkSmartPointer<vtkIdList> cellIds = vtkSmartPointer<vtkIdList>::New();
-  m_CellLocator->FindCellsAlongLine(p1, p2, 0.0001, cellIds);
-
   m_RECISTXYZLength = 0;
-  std::vector< PointType > intersectionPts;
 
-  //std::cout << "There are " << cellIds->GetNumberOfIds() << " intersections along Z" << std::endl;
-  for (vtkIdType q = 0; q < cellIds->GetNumberOfIds(); q++)
+  auto [dist, intersectionPoint1, intersectionPoint2] =
+      IntersectSurfaceWithLine(
+          PointType(m_RECISTXYIntersection) - VectorType{{0, 0, 100}},
+          PointType(m_RECISTXYIntersection) + VectorType{{0, 0, 100}});
+  if (m_RECISTXYZLength < dist)
   {
-
-    // Retrieve the cell that was intersected
-    double tmpFactor, tmpPoint[3];
-    vtkIdType cellId = cellIds->GetId(q);
-    vtkCell *cell = m_Surface->GetCell(cellId);
-
-    // Verify again by intersecting the specific cell that it really intersected.
-    // Also get the intersection point x.
-    if (cell->IntersectWithLine(p1, p2, 0.0001, t, x, pcoords, subId))
-    {
-      PointType intersectionPt;
-      for (int a = 0; a < 3; ++a)
-        intersectionPt[a] = x[a];
-      intersectionPts.push_back(intersectionPt);
-    }
-  }
-
-  // intersectionPts contains the intersetions of the segmentation surface with
-  // the line along the Z axis that passes through the in-plane bi-dimensional measure's intersection
-  if (intersectionPts.size() >= 2)
-  {
-    // find the farthest 2 intersections.
-    for (unsigned int q = 0; q < intersectionPts.size()-1; ++q)
-    {
-      for (unsigned int r = 1; r < intersectionPts.size(); ++r)
-      {
-        const double dist = (intersectionPts[q] - intersectionPts[r]).GetNorm();
-        if (m_RECISTXYZLength < dist)
-        {
-          m_RECISTXYZLength = dist;
-          m_RECISTXYZEndPoint1 = intersectionPts[q];
-          m_RECISTXYZEndPoint2 = intersectionPts[r];
-        }
-      }
-    }
+    m_RECISTXYZLength = dist;
+    m_RECISTXYZEndPoint1 = intersectionPoint1;
+    m_RECISTXYZEndPoint2 = intersectionPoint2;
   }
 
   // Compute the outer bounding box of the nodule segmentation
@@ -450,7 +393,7 @@ void TriDimensionalMeasurementCalculator<TImage>::ComputeRECISTZ()
     return;
 
   const PointType origin = m_Image->GetOrigin();
-  PointType p1, p2;
+  PointType p1, p2, intersectionPoint1, intersectionPoint2;
   const SpacingType spacing = m_Image->GetSpacing();
   typename RegionType::IndexType index, indexStart, indexEnd;
 
@@ -477,50 +420,13 @@ void TriDimensionalMeasurementCalculator<TImage>::ComputeRECISTZ()
         p1[i] = p2[i] = (double)(index[i]) * spacing[i] + origin[i];
       }
 
-      vtkSmartPointer<vtkIdList> cellIds = vtkSmartPointer<vtkIdList>::New();
-      m_CellLocator->FindCellsAlongLine(
-          p1.GetDataPointer(), p2.GetDataPointer(), 0.0001, cellIds);
-
-      std::vector<PointType> intersectionPts;
-
-      for (vtkIdType q = 0; q < cellIds->GetNumberOfIds(); q++)
+      auto [dist, intersectionPoint1, intersectionPoint2] =
+          IntersectSurfaceWithLine(p1, p2);
+      if (m_RECISTZLength < dist)
       {
-
-        // Retrieve the cell that was intersected
-        vtkIdType cellId = cellIds->GetId(q);
-        vtkCell *cell = m_Surface->GetCell(cellId);
-
-        // Verify again by intersecting the specific cell that it really intersected.
-        // Also get the intersection point x.
-        double t, x[3], pcoords[3];
-        int subId;
-        if (cell->IntersectWithLine(p1.GetDataPointer(), p2.GetDataPointer(), 0.0001, t, x, pcoords, subId))
-        {
-          PointType intersectionPt;
-          for (int a = 0; a < 3; ++a)
-            intersectionPt[a] = x[a];
-          intersectionPts.push_back(intersectionPt);
-        }
-      }
-
-      // intersectionPts contains the intersetions of the segmentation surface with
-      // the line along the Z axis that passes through this XY index
-      if (intersectionPts.size() >= 2)
-      {
-        // find the farthest 2 intersections.
-        for (unsigned int q = 0; q < intersectionPts.size() - 1; ++q)
-        {
-          for (unsigned int r = 1; r < intersectionPts.size(); ++r)
-          {
-            const double dist = (intersectionPts[q] - intersectionPts[r]).GetNorm();
-            if (m_RECISTZLength < dist)
-            {
-              m_RECISTZLength = dist;
-              m_RECISTZEndPoint1 = intersectionPts[q];
-              m_RECISTZEndPoint2 = intersectionPts[r];
-            }
-          }
-        }
+        m_RECISTZLength = dist;
+        m_RECISTZEndPoint1 = intersectionPoint1;
+        m_RECISTZEndPoint2 = intersectionPoint2;
       }
     }
   }
@@ -548,18 +454,11 @@ TriDimensionalMeasurementCalculator<TImage>::IntersectSurfaceWithLine(PointType 
     double t, x[3], pcoords[3];
     int subId;
     if (cell->IntersectWithLine(p1.GetDataPointer(), p2.GetDataPointer(), 0.0001, t, x, pcoords, subId))
-    {
-      PointType intersectionPt;
-      for (int a = 0; a < 3; ++a)
-        intersectionPt[a] = x[a];
-      intersectionPts.push_back(intersectionPt);
-    }
+      intersectionPts.push_back(PointType(x));
   }
 
   double distMax = 0;
-  PointType endPoint1, endPoint2;
-  endPoint1.Fill(0);
-  endPoint2.Fill(0);
+  PointType endPoint1(0), endPoint2(0);
 
   // intersectionPts contains the intersetions of the segmentation surface with
   // the line along the Z axis that passes through this XY index
