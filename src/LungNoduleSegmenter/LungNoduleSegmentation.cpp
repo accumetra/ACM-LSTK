@@ -342,34 +342,67 @@ int main( int argc, char * argv[] )
 
 		std::cout << "Tri-dimensional measurement = "
                   << " [" 
-                  << view->Sizer()->GetRECISTLength() << " x "
-                  << view->Sizer()->GetRECISTPerpLength() << " x "
+                  << view->Sizer()->GetRECISTXYLength() << " x "
+                  << view->Sizer()->GetRECISTXYPerpLength() << " x "
                   << view->Sizer()->GetRECISTZLength() 
                   << "] mm" << std::endl;
+
+                double maxzlength = 0.0;
+
+                InputImageType::PointType zEndPoints[2];
+                if( view->Sizer()->GetRECISTXZLength() > view->Sizer()->GetRECISTYZLength() )
+                {
+                   maxzlength = view->Sizer()->GetRECISTXZLength();
+                   zEndPoints[0] = view->Sizer()->GetRECISTXZEndPoint1();
+                   zEndPoints[1] = view->Sizer()->GetRECISTXZEndPoint2();
+                }
+                else
+                {
+                   maxzlength = view->Sizer()->GetRECISTYZLength();
+                   zEndPoints[0] = view->Sizer()->GetRECISTYZEndPoint1();
+                   zEndPoints[1] = view->Sizer()->GetRECISTYZEndPoint2();
+                }
+
+                /*
+		std::cout << "Tri-dimensional measurement v2 = "
+                  << " [" 
+                  << view->Sizer()->GetRECISTXYLength() << " x "
+                  << view->Sizer()->GetRECISTXYPerpLength() << " x "
+                  << maxzlength
+                  << "] mm" << std::endl;
+                */
 
                 std::cout << "3D bounding box measurement = " <<
                  (view->Sizer()->GetBBox()->GetMaximum() - view->Sizer()->GetBBox()->GetMinimum()) << " mm" << std::endl;
 
-                std::cout << "  RECIST measure endpoints are " << view->Sizer()->GetRECISTEndPoint1() 
-                  << " to " << view->Sizer()->GetRECISTEndPoint2() << " mm" << std::endl;
-                std::cout << "  RECIST Perp measure endpoints are " << view->Sizer()->GetRECISTPerpEndPoint1() 
-                  << " to " << view->Sizer()->GetRECISTPerpEndPoint2() << " mm" << std::endl;
-                std::cout << "  RECIST Z measure endpoints are " << view->Sizer()->GetRECISTZEndPoint1() 
-                  << " to " << view->Sizer()->GetRECISTZEndPoint2() << " mm" << std::endl;
+                std::cout << "  Bidimensional max line endpoints are: " << view->Sizer()->GetRECISTXYEndPoint1() 
+                  << " to " << view->Sizer()->GetRECISTXYEndPoint2() << " mm" << std::endl;
+                std::cout << "  Bidimensional max perpendicular line endpoints are: " << view->Sizer()->GetRECISTXYPerpEndPoint1() 
+                  << " to " << view->Sizer()->GetRECISTXYPerpEndPoint2() << " mm" << std::endl;
+                std::cout << "  Tridimensional max Z line endpoints are: " << view->Sizer()->GetRECISTZEndPoint1() << " to "
+                          << view->Sizer()->GetRECISTZEndPoint2() << " mm" << std::endl;
+
+                /*
+                std::cout << "  Tridiemnsional Z measure endpoints are: " << view->Sizer()->GetRECISTXYZEndPoint1() 
+                  << " to " << view->Sizer()->GetRECISTXYZEndPoint2() << " mm" << std::endl;
+                std::cout << "  Tridiemnsional Z measure v2 endpoints are " << zEndPoints[0]
+                          << " to " << zEndPoints[1] << " mm" << std::endl;
+                */
+
                 std::cout << "  Nodule bounds along the X,Y,Z axes are from " << (view->Sizer()->GetBBox()->GetMinimum())
                   << " to " << (view->Sizer()->GetBBox()->GetMaximum()) << " mm" << std::endl;
 
-		if (args.GetOptionWasSet("OutputMesh"))
-			view->WriteSegmentationAsSurface(args.GetValueAsString("OutputMesh").c_str());
+                if (args.GetOptionWasSet("OutputMesh"))
+                  view->WriteSegmentationAsSurface(args.GetValueAsString("OutputMesh").c_str());
 
-  		// Set the screenshot directory
-  		if( !args.GetValueAsString("Screenshot").empty() )
-  		{
-		    view->SetScreenshotFilename( args.GetValueAsString("Screenshot") );
-  		}
+                // Set the screenshot directory
+                if (!args.GetValueAsString("Screenshot").empty())
+                {
+                  view->SetScreenshotFilename(args.GetValueAsString("Screenshot"));
+    }
 
-		return view->View();
-	}
+    return view->View();
+  }
 
   return EXIT_SUCCESS;
 }

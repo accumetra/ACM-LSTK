@@ -85,11 +85,10 @@ public:
   typedef CannyEdgesFeatureGenerator< ImageDimension > CannyEdgesFeatureGeneratorType;
   typedef typename CannyEdgesFeatureGeneratorType::SigmaArrayType SigmaArrayType;
 
-  virtual void GenerateInputRequestedRegion()
-            throw(InvalidRequestedRegionError);
+  virtual void GenerateInputRequestedRegion();
 
-	typedef itk::Image< unsigned char, 3 > MaskImageType;
-	typedef typename MaskImageType::Pointer MaskImagePointer;
+  typedef itk::Image<unsigned char, 3> MaskImageType;
+  typedef typename MaskImageType::Pointer MaskImagePointer;
 
 #ifdef ITK_USE_CONCEPT_CHECKING
   /** Begin concept checking */

@@ -112,9 +112,7 @@ LesionSegmentationImageFilterACM() :
 }
 
 template <class TInputImage, class TOutputImage>
-void
-LesionSegmentationImageFilterACM<TInputImage,TOutputImage>
-::GenerateInputRequestedRegion() throw(InvalidRequestedRegionError)
+void LesionSegmentationImageFilterACM<TInputImage, TOutputImage>::GenerateInputRequestedRegion()
 {
   // call the superclass' implementation of this method
   Superclass::GenerateInputRequestedRegion();

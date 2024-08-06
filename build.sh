@@ -4,7 +4,7 @@
 
 #TODO: initial checks to ensure running as root (for chmod)
 
-export DEV_DIR=/home/ubuntu/Dev
+export DEV_DIR=/home/rick/Dev/accumetra
 
 function configureInitialPrerequisites() {
   #
