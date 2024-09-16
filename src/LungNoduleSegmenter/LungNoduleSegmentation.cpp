@@ -27,11 +27,13 @@
 #define VTK_CREATE(type, name) \
   vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
 
+const unsigned int Dimension = LesionSegmentationCLI::ImageDimension;
+typedef itk::Image<LesionSegmentationCLI::PixelType, Dimension> ImageType;
+typedef ImageType::DirectionType DirectionType;
+
 // --------------------------------------------------------------------------
 LesionSegmentationCLI::InputImageType::Pointer GetImage( std::string dir, bool ignoreDirection )
 {
-  const unsigned int Dimension = LesionSegmentationCLI::ImageDimension;
-  typedef itk::Image< LesionSegmentationCLI::PixelType, Dimension > ImageType;
 
   typedef itk::ImageSeriesReader< ImageType > ReaderType;
   ReaderType::Pointer reader = ReaderType::New();
@@ -118,7 +120,10 @@ LesionSegmentationCLI::InputImageType::Pointer GetImage( std::string dir, bool i
       //std::cout << "Ignoring the direction of the DICOM image and typedef identity." << std::endl;
       image->SetDirection(direction);
       }
-    return image;
+
+      image->SetMetaDataDictionary(dicomIO->GetMetaDataDictionary());
+
+      return image;
     }
   catch (itk::ExceptionObject &ex)
     {
