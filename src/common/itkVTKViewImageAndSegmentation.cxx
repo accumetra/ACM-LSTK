@@ -67,7 +67,7 @@ namespace itk
 {
 
 	VTKViewImageAndSegmentation::VTKViewImageAndSegmentation() :
-		m_Volume(0)
+		m_Volume(0), m_SurfaceArea(0)
 	{
 		m_Image = nullptr;
 		m_Mask = nullptr;
@@ -99,6 +99,7 @@ namespace itk
 		m_SurfaceProperties->SetInputData(m_Surface);
 		m_SurfaceProperties->Update();
 		m_Volume = m_SurfaceProperties->GetVolume();
+		m_SurfaceArea = m_SurfaceProperties->GetSurfaceArea();
 
     ComputeNoduleLengths();
 	}
@@ -146,6 +147,7 @@ namespace itk
 		m_SurfaceProperties->SetInputData(m_Surface);
 		m_SurfaceProperties->Update();
 		m_Volume = m_SurfaceProperties->GetVolume();
+		m_SurfaceArea = m_SurfaceProperties->GetSurfaceArea();
 
     ComputeNoduleLengths();
 	}
@@ -307,6 +309,11 @@ namespace itk
 	double VTKViewImageAndSegmentation::GetVolume() const
 	{
 		return m_Volume;
+	}
+
+	double VTKViewImageAndSegmentation::GetSurfaceArea() const
+	{
+		return m_SurfaceArea;
 	}
 
 	void VTKViewImageAndSegmentation::WriteSegmentationAsSurface( const std::string &fn )

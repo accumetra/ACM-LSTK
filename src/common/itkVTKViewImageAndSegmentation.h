@@ -54,6 +54,7 @@ public:
 
 	/** Only valid after Set***Surface is called */
 	double GetVolume() const;
+	double GetSurfaceArea() const;
 
 	int View();
 
@@ -94,6 +95,7 @@ protected:
 	vtkSmartPointer< vtkActor > m_SurfaceActor;
 	SegmentationRenderMode m_SegmentationRenderMode;
 	double m_Volume;
+	double m_SurfaceArea;
 
   typename NoduleSizerType::Pointer m_NoduleLengths;
 

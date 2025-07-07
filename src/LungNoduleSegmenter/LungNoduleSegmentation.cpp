@@ -352,6 +352,7 @@ int main( int argc, char * argv[] )
 		view->SetSegmentationRenderMode(args.GetOptionWasSet("Outline") ?
 			itk::VTKViewImageAndSegmentation::SegmentationRenderMode::Outline :
 			itk::VTKViewImageAndSegmentation::SegmentationRenderMode::Surface);
+		std::cout << "Surface area measurement = " << std::fixed << std::setprecision(2) << (view->GetSurfaceArea()) << " mm^2" << std::endl;
 		std::cout << "Volume measurement = " << std::fixed << std::setprecision(2) << (view->GetVolume()) << " mm^3" << std::endl;
 
 		std::cout << "Tri-dimensional measurement = "
