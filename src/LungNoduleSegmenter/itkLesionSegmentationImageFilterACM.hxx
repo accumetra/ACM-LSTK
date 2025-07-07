@@ -93,7 +93,6 @@ LesionSegmentationImageFilterACM() :
   m_CannyEdgesFeatureGenerator->SetLowerThreshold( 75.0 );
   m_FastMarchingStoppingTime = 5.0;
   m_FastMarchingDistanceFromSeeds = 0.5;
-  m_SigmoidBeta = -500.0;
   m_StatusMessage = "";
   m_SegmentationModule->SetCurvatureScaling(1.0);
   m_SegmentationModule->SetAdvectionScaling(0.0);
@@ -330,8 +329,7 @@ void LesionSegmentationImageFilterACM< TInputImage,TOutputImage >
     else if (dynamic_cast< VesselnessGeneratorType * >(caller))
       {
       m_StatusMessage = "Generating vesselness feature (Sato et al.)..";
-//      this->UpdateProgress( m_LungWallFeatureGenerator2->GetProgress() );
-      this->UpdateProgress( m_LungWallFeatureGenerator->GetProgress() );
+      this->UpdateProgress( m_VesselnessFeatureGenerator->GetProgress() );
       }
 
     else if (dynamic_cast< SegmentationModuleType * >(caller))

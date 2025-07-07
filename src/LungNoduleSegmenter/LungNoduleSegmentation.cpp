@@ -316,7 +316,16 @@ int main( int argc, char * argv[] )
     {
     seg->SetSigma(args.GetSigmas());
     }
-  seg->SetSigmoidBeta(args.GetValueAsBool("PartSolid") ? -500 : -200 );
+
+  if (args.GetValueAsBool("PartSolid"))
+    {
+    seg->SetSigmoidBeta(-500);
+    }
+  else
+    {
+    seg->SetSigmoidBeta(-200);
+    }
+
   seg->Update();
 
 
