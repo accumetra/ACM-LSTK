@@ -87,6 +87,7 @@ LesionSegmentationImageFilterACM() :
   m_VesselnessFeatureGenerator->SetSigmoidAlpha( -10.0 );
   m_VesselnessFeatureGenerator->SetSigmoidBeta( 40.0 );
   m_SigmoidFeatureGenerator->SetAlpha( 100.0 );
+  m_SigmoidAlpha = 100.0;
   m_SigmoidFeatureGenerator->SetBeta( -500.0 );
   m_CannyEdgesFeatureGenerator->SetSigma(0.5);
   m_CannyEdgesFeatureGenerator->SetUpperThreshold( 150.0 );
@@ -203,6 +204,7 @@ LesionSegmentationImageFilterACM< TInputImage, TOutputImage >
 //	m_LungWallFeatureGenerator2->SetUseGPU(m_UseGPU);
 //	m_LungWallFeatureGenerator->SetUseGPU(m_UseGPU);
 
+  m_SigmoidFeatureGenerator->SetAlpha( m_SigmoidAlpha );
   m_SigmoidFeatureGenerator->SetBeta( m_SigmoidBeta );
   m_SegmentationModule->SetDistanceFromSeeds(m_FastMarchingDistanceFromSeeds);
   m_SegmentationModule->SetStoppingValue(m_FastMarchingStoppingTime);

@@ -9,6 +9,7 @@
 #include "itkImageSeriesReader.h"
 #include "itkEventObject.h"
 #include "itkOrientImageFilter.h"
+#include "itkSmoothingRecursiveGaussianImageFilter.h"
 #include "itkImageToVTKImageFilter.h"
 #include "vtkImageData.h"
 #include "vtkMarchingCubes.h"
@@ -215,6 +216,21 @@ int main( int argc, char * argv[] )
   // Set the image object on the args
   args.SetImage( image );
 
+  // Optional recursive Gaussian smoothing of the CT, used for segmentation only
+  // (the visualization and screenshots show the unsmoothed CT).
+  InputImageType::Pointer segmentationInput = image;
+  const double smoothingSigma = args.GetValueAsFloat("SmoothingSigma");
+  if (smoothingSigma > 0)
+    {
+    typedef itk::SmoothingRecursiveGaussianImageFilter< InputImageType, InputImageType > SmoothingFilterType;
+    SmoothingFilterType::Pointer smoother = SmoothingFilterType::New();
+    smoother->SetInput(image);
+    smoother->SetSigma(smoothingSigma);  // physical units (mm)
+    smoother->Update();
+    segmentationInput = smoother->GetOutput();
+    segmentationInput->DisconnectPipeline();
+    }
+
 
   // Compute the ROI region
 
@@ -308,7 +324,7 @@ int main( int argc, char * argv[] )
       seg->SetIsotropicSampleSpacing((image->GetSpacing()[0] + image->GetSpacing()[2])/2.0);
     }
   }
-  seg->SetInput(image);
+  seg->SetInput(segmentationInput);
   seg->SetSeeds(args.GetSeeds());
   seg->SetRegionOfInterest(roiRegion);
   //seg->AddObserver( itk::ProgressEvent(), progressCommand );
@@ -325,6 +341,13 @@ int main( int argc, char * argv[] )
     {
     seg->SetSigmoidBeta(-200);
     }
+  if (args.GetOptionWasSet("IntensitySigmoidBeta"))
+    {
+    seg->SetSigmoidBeta(args.GetValueAsFloat("IntensitySigmoidBeta"));
+    }
+  seg->SetSigmoidAlpha(args.GetValueAsFloat("IntensitySigmoidAlpha"));
+  seg->SetCannyUpperThreshold(args.GetValueAsFloat("CannyUpperThreshold"));
+  seg->SetCannyLowerThreshold(args.GetValueAsFloat("CannyLowerThreshold"));
 
   seg->Update();
 
@@ -348,6 +371,18 @@ int main( int argc, char * argv[] )
 		itk::VTKViewImageAndSegmentation::Pointer view =
 			itk::VTKViewImageAndSegmentation::New();
 		view->SetImage(image);
+		if (args.GetOptionWasSet("SegmentationColor"))
+		{
+			std::list<std::string> rgb = args.GetValueAsList("SegmentationColor");
+			if (rgb.size() != 3)
+			{
+				std::cerr << "SegmentationColor must have 3 values (R G B, 0-1)." << std::endl;
+				return EXIT_FAILURE;
+			}
+			std::list<std::string>::const_iterator it = rgb.begin();
+			const double r = atof((it++)->c_str()), g = atof((it++)->c_str()), b = atof(it->c_str());
+			view->SetSegmentationColor(r, g, b);
+		}
 		view->SetSegmentationSurfaceFromLevelSet(seg->GetOutput(), -0.5);
 		view->SetSegmentationRenderMode(args.GetOptionWasSet("Outline") ?
 			itk::VTKViewImageAndSegmentation::SegmentationRenderMode::Outline :

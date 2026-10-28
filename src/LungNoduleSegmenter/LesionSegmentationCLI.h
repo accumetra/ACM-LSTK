@@ -52,6 +52,12 @@ public:
     this->AddArgument("Outline", false, "Visualize the input image and the segmented surface as a cut on the slices. Only valid if the Visualize flag is also enabled.", MetaCommand::BOOL, "0");
     this->AddArgument("IgnoreDirection", false, "Ignore the direction of the DICOM image", MetaCommand::BOOL, "0");
     this->AddArgument("PartSolid", false, "Default is to assume parameters for a solid lesion. Specify this if the lesion is part-solid.", MetaCommand::BOOL, "0");
+    this->AddArgument("IntensitySigmoidAlpha", false, "Width (in HU) of the sigmoid intensity feature centred at -200 HU (solid) or -500 HU (part-solid). Smaller values give a sharper intensity cut-off.", MetaCommand::FLOAT, "100");
+    this->AddArgument("IntensitySigmoidBeta", false, "Centre (HU) of the sigmoid intensity feature. Overrides the default of -200 HU (solid) or -500 HU (PartSolid).", MetaCommand::FLOAT, "-200");
+    this->AddArgument("SegmentationColor", false, "RGB (0-1) of the rendered nodule surface and its cut outline, e.g. --SegmentationColor 3 0.75 0.35 0.35. Default orange-red 1.0 0.353 0.122.", MetaCommand::LIST);
+    this->AddArgument("CannyUpperThreshold", false, "Upper hysteresis threshold (gradient magnitude, HU/mm) of the Canny edge feature. Default 150.", MetaCommand::FLOAT, "150");
+    this->AddArgument("CannyLowerThreshold", false, "Lower hysteresis threshold (gradient magnitude, HU/mm) of the Canny edge feature. Default 75.", MetaCommand::FLOAT, "75");
+    this->AddArgument("SmoothingSigma", false, "Sigma (mm) of a recursive Gaussian applied to the CT before segmentation. 0 (default) = no smoothing.", MetaCommand::FLOAT, "0");
     this->AddArgument("ROI", false,
                       "Bounds of the ROI if any, 6 parameters as minX, maxX, minY, maxY, minZ, maxZ", MetaCommand::LIST);
     this->AddArgument("Sigma", false,

@@ -111,6 +111,14 @@ public:
   itkSetMacro( SigmoidBeta, double );
   itkGetMacro( SigmoidBeta, double );
 
+  /** Set the alpha (width, in HU) for the sigmoid intensity feature. Defaults to 100. */
+  itkSetMacro( SigmoidAlpha, double );
+  itkGetMacro( SigmoidAlpha, double );
+
+  /** Hysteresis thresholds (gradient magnitude, HU/mm) of the Canny edge feature. Defaults 150 / 75. */
+  void SetCannyUpperThreshold(double t) { m_CannyEdgesFeatureGenerator->SetUpperThreshold(t); this->Modified(); }
+  void SetCannyLowerThreshold(double t) { m_CannyEdgesFeatureGenerator->SetLowerThreshold(t); this->Modified(); }
+
   /** Set a custom output spacing. If specified, this overrides anything that may be obtained by
    * turning ON ResampleThickSliceData. Defaults to 0, ie it is not considered. */
   itkSetMacro( IsotropicSampleSpacing, double );
@@ -200,6 +208,7 @@ private:
   virtual ~LesionSegmentationImageFilterACM(){};
 
   double                                m_SigmoidBeta;
+  double                                m_SigmoidAlpha;
   double                                m_FastMarchingStoppingTime;
   double                                m_FastMarchingDistanceFromSeeds;
 

@@ -67,6 +67,12 @@ public:
 	};*/
 	void SetSegmentationRenderMode(SegmentationRenderMode);
 
+	/** RGB (0-1) of the segmentation surface and its cut outline. Defaults to orange-red (1.0, 0.353, 0.122). */
+	void SetSegmentationColor(double r, double g, double b)
+	{
+		m_SegmentationColor[0] = r; m_SegmentationColor[1] = g; m_SegmentationColor[2] = b;
+	}
+
   // For nodule lengths
   using NoduleSizerType = itk::TriDimensionalMeasurementCalculator< ImageType >;
 
@@ -94,6 +100,7 @@ protected:
 	std::vector< vtkSmartPointer< vtkActor > > m_SurfaceOutlineActors;
 	vtkSmartPointer< vtkActor > m_SurfaceActor;
 	SegmentationRenderMode m_SegmentationRenderMode;
+	double m_SegmentationColor[3];
 	double m_Volume;
 	double m_SurfaceArea;
 

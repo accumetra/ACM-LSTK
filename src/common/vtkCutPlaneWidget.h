@@ -483,6 +483,8 @@ public:
 	/** Set the surface to be cut */
 	void SetSurface(vtkPolyData *s);
 	void SetSurfaceActor(vtkActor *a) { m_SurfaceActor = a;  }
+	/** RGB (0-1) of the outline where the surface is cut by the plane */
+	void SetSurfaceOutlineColor(const double c[3]);
 	enum class SegmentationRenderMode
 	{
 		Surface,

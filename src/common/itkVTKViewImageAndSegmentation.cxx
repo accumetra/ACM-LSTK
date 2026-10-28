@@ -72,6 +72,7 @@ namespace itk
 		m_Image = nullptr;
 		m_Mask = nullptr;
 		m_SegmentationRenderMode = VTKViewImageAndSegmentation::SegmentationRenderMode::Surface;
+		this->SetSegmentationColor(1.0, 0.353, 0.122);  // orange-red #FF5A1F
     m_NoduleLengths = NoduleSizerType::New();
 	}
 
@@ -189,6 +190,8 @@ namespace itk
 
 		polyActor->SetMapper(polyMapper);
 		polyMapper->SetInputData(normals->GetOutput());
+		// Colour from the property below, not from the marching-cubes scalars (default LUT gave dark red)
+		polyMapper->ScalarVisibilityOff();
 
 		// Create 3 orthogonal view typedef the ImagePlaneWidget
 		vtkSmartPointer< vtkCutPlaneWidget > imagePlaneWidget[3];
@@ -211,6 +214,7 @@ namespace itk
 			imagePlaneWidget[i]->SetInteractor(m_Interactor);
 			imagePlaneWidget[i]->SetSurface(this->m_Surface);
 			imagePlaneWidget[i]->SetSurfaceActor(polyActor);
+			imagePlaneWidget[i]->SetSurfaceOutlineColor(m_SegmentationColor);
 			imagePlaneWidget[i]->SetSegmentationRenderMode(m_SegmentationRenderMode);
 			imagePlaneWidget[i]->On();
 		}
@@ -226,7 +230,7 @@ namespace itk
 		noduleProperty->SetAmbient(0.3);
 		noduleProperty->SetDiffuse(0.6);
 		noduleProperty->SetSpecular(0.1);
-		noduleProperty->SetColor(1.0, 0.8, 0.8);
+		noduleProperty->SetColor(m_SegmentationColor);
 		noduleProperty->SetLineWidth(1.5);
 		noduleProperty->SetRepresentationToSurface();
 

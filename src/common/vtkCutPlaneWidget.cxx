@@ -89,7 +89,7 @@ vtkCutPlaneWidget::vtkCutPlaneWidget() : vtkPolyDataSourceWidget()
 	this->SurfaceOutlineActor = vtkActor::New();
 	vtkSmartPointer< vtkProperty > surfaceOutlineProperty
 		= vtkSmartPointer< vtkProperty >::New();
-	surfaceOutlineProperty->SetColor(1.0, 0.2, 0.0);
+	surfaceOutlineProperty->SetColor(1.0, 0.353, 0.122);  // orange-red #FF5A1F
 	surfaceOutlineProperty->SetLineWidth(1.5);
 	surfaceOutlineProperty->SetRepresentationToWireframe();
 	surfaceOutlineProperty->SetInterpolationToFlat();
@@ -1884,6 +1884,11 @@ vtkLookupTable* vtkCutPlaneWidget::CreateDefaultLookupTable()
 }
 
 //----------------------------------------------------------------------------
+void vtkCutPlaneWidget::SetSurfaceOutlineColor(const double c[3])
+{
+	this->SurfaceOutlineActor->GetProperty()->SetColor(c[0], c[1], c[2]);
+}
+
 void vtkCutPlaneWidget::SetSurface(vtkPolyData *s)
 {
 	this->SurfaceCutter->SetInputData(s);
