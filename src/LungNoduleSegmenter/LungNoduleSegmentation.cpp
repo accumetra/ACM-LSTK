@@ -1,7 +1,10 @@
 // Copyright (c) Accumetra, LLC
 
+#include "SubvoxelEdgeRefinement.h"
 #include "itkImageFileReader.h"
 #include "itkImageFileWriter.h"
+#include "itkResampleImageFilter.h"
+#include "itkLinearInterpolateImageFunction.h"
 #include "itkGDCMImageIO.h"
 #include "itkGDCMImageIOFactory.h"
 #include "itkGDCMSeriesFileNames.h"
@@ -136,6 +139,157 @@ LesionSegmentationCLI::InputImageType::Pointer GetImage( std::string dir, bool i
 }
 
 // --------------------------------------------------------------------------
+// A binary segmentation (nonzero inside) at any resolution and orientation, resampled linearly onto 'reference'
+// (when given) or onto a new isotropic grid of 'spacing' mm with identity direction covering the segmentation plus
+// 'pad' mm. Returned as a level set with the segmentation's 0.5 contour at -0.5 (inside > -0.5).
+typedef LesionSegmentationCLI::RealImageType GuideImageType;
+static GuideImageType::Pointer SegmentationAsLevelSet(const std::string & fileName, const GuideImageType * reference,
+                                                      double spacing, double pad)
+{
+  typedef itk::ImageFileReader< GuideImageType > GuideReaderType;
+  GuideReaderType::Pointer reader = GuideReaderType::New();
+  reader->SetFileName(fileName);
+  reader->Update();
+  GuideImageType::Pointer mask = reader->GetOutput();
+  mask->DisconnectPipeline();
+  bool any = false;
+  GuideImageType::IndexType lo, hi;
+  for (unsigned int d = 0; d < 3; d++) { lo[d] = itk::NumericTraits< long >::max(); hi[d] = itk::NumericTraits< long >::min(); }
+  for (itk::ImageRegionIteratorWithIndex< GuideImageType > it(mask, mask->GetBufferedRegion()); !it.IsAtEnd(); ++it)
+    {
+    const bool in = it.Get() != 0;
+    it.Set(in ? 1.0f : 0.0f);
+    if (in)
+      {
+      any = true;
+      for (unsigned int d = 0; d < 3; d++) { lo[d] = std::min(lo[d], it.GetIndex()[d]); hi[d] = std::max(hi[d], it.GetIndex()[d]); }
+      }
+    }
+  if (!any) return nullptr;
+
+  typedef itk::ResampleImageFilter< GuideImageType, GuideImageType > GuideResampleType;
+  GuideResampleType::Pointer rs = GuideResampleType::New();
+  rs->SetInput(mask);
+  rs->SetInterpolator(itk::LinearInterpolateImageFunction< GuideImageType, double >::New());
+  rs->SetDefaultPixelValue(0);
+  if (reference)
+    {
+    rs->SetReferenceImage(reference); rs->UseReferenceImageOn();
+    }
+  else
+    {
+    // physical bounding box of the segmentation's voxels (all 8 corners, half a voxel out), plus pad
+    double bmin[3], bmax[3];
+    for (unsigned int d = 0; d < 3; d++) { bmin[d] = 1e30; bmax[d] = -1e30; }
+    for (int c = 0; c < 8; c++)
+      {
+      itk::ContinuousIndex< double, 3 > ci;
+      for (unsigned int d = 0; d < 3; d++) ci[d] = ((c >> d) & 1) ? hi[d] + 0.5 : lo[d] - 0.5;
+      GuideImageType::PointType p;
+      mask->TransformContinuousIndexToPhysicalPoint(ci, p);
+      for (unsigned int d = 0; d < 3; d++) { bmin[d] = std::min(bmin[d], p[d]); bmax[d] = std::max(bmax[d], p[d]); }
+      }
+    GuideImageType::PointType origin;
+    GuideImageType::SizeType size;
+    GuideImageType::SpacingType sp;
+    GuideImageType::DirectionType dir;
+    dir.SetIdentity();
+    for (unsigned int d = 0; d < 3; d++)
+      {
+      sp[d] = spacing;
+      origin[d] = std::floor((bmin[d] - pad) / spacing) * spacing;
+      size[d] = static_cast< itk::SizeValueType >(std::ceil((bmax[d] + pad - origin[d]) / spacing)) + 1;
+      }
+    rs->SetOutputOrigin(origin); rs->SetOutputSpacing(sp); rs->SetOutputDirection(dir); rs->SetSize(size);
+    }
+  rs->Update();
+  GuideImageType::Pointer ls = rs->GetOutput();
+  ls->DisconnectPipeline();
+  for (itk::ImageRegionIterator< GuideImageType > it(ls, ls->GetBufferedRegion()); !it.IsAtEnd(); ++it)
+    it.Set(it.Get() - 1.0f);
+  return ls;
+}
+
+// The point of a level set (inside > -0.5) farthest from its surface: a seed safely inside the segmentation
+static GuideImageType::PointType DeepestPoint(const GuideImageType * ls)
+{
+  typedef itk::Image< unsigned char, 3 > BinaryType;
+  BinaryType::Pointer m = BinaryType::New();
+  m->CopyInformation(ls); m->SetRegions(ls->GetLargestPossibleRegion()); m->Allocate();
+  for (itk::ImageRegionIteratorWithIndex< BinaryType > it(m, m->GetBufferedRegion()); !it.IsAtEnd(); ++it)
+    it.Set(ls->GetPixel(it.GetIndex()) > -0.5f ? 1 : 0);
+  typedef itk::SignedMaurerDistanceMapImageFilter< BinaryType, GuideImageType > DistType;
+  DistType::Pointer dist = DistType::New();
+  dist->SetInput(m); dist->SetUseImageSpacing(true); dist->SetSquaredDistance(false); dist->SetInsideIsPositive(true);
+  dist->Update();
+  float best = -1e30f;
+  GuideImageType::IndexType bestIndex = ls->GetLargestPossibleRegion().GetIndex();
+  for (itk::ImageRegionConstIteratorWithIndex< GuideImageType > it(dist->GetOutput(), dist->GetOutput()->GetBufferedRegion()); !it.IsAtEnd(); ++it)
+    if (it.Get() > best) { best = it.Get(); bestIndex = it.GetIndex(); }
+  GuideImageType::PointType p;
+  ls->TransformIndexToPhysicalPoint(bestIndex, p);
+  return p;
+}
+
+// --------------------------------------------------------------------------
+// Sub-voxel edge refinement about 'guide' (LSTK's level set, or a segmentation as a level set); prints the refined
+// volumes, writes the requested level sets, and on success points viewLevelSet / viewIso at the corrected surface.
+static int RefineEdge(LesionSegmentationCLI & args, const LesionSegmentationCLI::InputImageType * image,
+                      const GuideImageType * guide, double guideIso, const GuideImageType::PointType & seed,
+                      const std::string & guideName, GuideImageType::Pointer & viewLevelSet, double & viewIso)
+{
+  typedef itk::ImageFileWriter< GuideImageType > OutputWriterType;
+  double psf[3];
+  const double * psfPtr = nullptr;
+  if (args.GetOptionWasSet("PSFSigma"))
+    {
+    std::list<std::string> s = args.GetValueAsList("PSFSigma");
+    if (s.size() != 3)
+      {
+      std::cerr << "PSFSigma must have 3 values (x y z, mm)." << std::endl;
+      return EXIT_FAILURE;
+      }
+    std::list<std::string>::const_iterator it = s.begin();
+    for (int i = 0; i < 3; i++) psf[i] = atof((it++)->c_str());
+    psfPtr = psf;
+    }
+  lstk::SubvoxelEdgeRefinement refine;
+  refine.LevelSetIso = guideIso;
+  refine.Run(image, guide, seed, psfPtr);
+  if (!refine.Valid)
+    {
+    std::cerr << "Edge refinement failed: no lung shell or no surface around the seed. Keeping "
+              << guideName << "." << std::endl;
+    return EXIT_SUCCESS;
+    }
+  std::cout << std::fixed << std::setprecision(2)
+            << "Refined edge: lesion " << refine.Lesion << " HU, lung " << refine.Lung << " HU, half-max threshold "
+            << refine.Threshold << " HU" << (refine.Attached ? " (attached structure: the cut of " + guideName + " is kept there)" : std::string()) << std::endl
+            << "Refined edge: blur sigma (x, y, z) used " << refine.SigmaUsed[0] << " " << refine.SigmaUsed[1] << " "
+            << refine.SigmaUsed[2] << " mm, estimated from the edges " << refine.SigmaEstimated[0] << " "
+            << refine.SigmaEstimated[1] << " " << refine.SigmaEstimated[2] << " mm (both include "
+            << refine.Smooth << " mm smoothing)" << std::endl
+            << "Refined volume (FWHM surface) = " << refine.FWHMVolume << " mm^3" << std::endl
+            << "Refined volume (edge corrected) = " << refine.CorrectedVolume << " mm^3" << std::endl;
+  if (!args.GetValueAsString("RefinedOutputImage").empty())
+    {
+    OutputWriterType::Pointer w = OutputWriterType::New();
+    w->SetFileName(args.GetValueAsString("RefinedOutputImage")); w->SetInput(refine.CorrectedLevelSet); w->Update();
+    }
+  if (!args.GetValueAsString("FWHMOutputImage").empty())
+    {
+    OutputWriterType::Pointer w = OutputWriterType::New();
+    w->SetFileName(args.GetValueAsString("FWHMOutputImage")); w->SetInput(refine.FWHMLevelSet); w->Update();
+    }
+  viewLevelSet = refine.CorrectedLevelSet;
+  viewIso = -0.5;
+  return EXIT_SUCCESS;
+}
+
+static int ViewAndMeasure(LesionSegmentationCLI & args, LesionSegmentationCLI::InputImageType * image,
+                          GuideImageType * viewLevelSet, double viewIso);
+
+// --------------------------------------------------------------------------
 int main( int argc, char * argv[] )
 {
   //register DICOM and META IO factories
@@ -215,6 +369,41 @@ int main( int argc, char * argv[] )
 
   // Set the image object on the args
   args.SetImage( image );
+
+  // Refine a supplied segmentation on its own: LSTK's level-set segmentation is not run
+  if (!args.GetValueAsString("RefineSegmentation").empty())
+    {
+    const double spacing = args.GetSupersampledIsotropicSpacing() > 0 ? args.GetSupersampledIsotropicSpacing() : 0.2;
+    lstk::SubvoxelEdgeRefinement defaults;
+    RealImageType::Pointer guide;
+    try { guide = SegmentationAsLevelSet(args.GetValueAsString("RefineSegmentation"), nullptr, spacing, defaults.Margin + 4.0); }
+    catch (itk::ExceptionObject & e) { std::cerr << "Reading RefineSegmentation: " << e << std::endl; return EXIT_FAILURE; }
+    if (!guide)
+      {
+      std::cerr << "RefineSegmentation " << args.GetValueAsString("RefineSegmentation") << " is empty." << std::endl;
+      return EXIT_FAILURE;
+      }
+    const RealImageType::PointType seed = args.GetOptionWasSet("Seeds") ? args.GetSeeds()[0].GetPositionInObjectSpace() : DeepestPoint(guide);
+    std::cout << std::fixed << std::setprecision(2)
+              << "Refining the segmentation " << args.GetValueAsString("RefineSegmentation") << " (resampled to " << spacing
+              << " mm), seed " << seed[0] << " " << seed[1] << " " << seed[2] << (args.GetOptionWasSet("Seeds") ? "" : " (deepest point)") << std::endl
+              << "Segmentation volume (its 0.5 contour) = " << lstk::SubvoxelEdgeRefinement::LevelSetVolume(guide) << " mm^3" << std::endl;
+    if (!args.GetValueAsString("OutputImage").empty())
+      {
+      OutputWriterType::Pointer writer = OutputWriterType::New();
+      writer->SetFileName(args.GetValueAsString("OutputImage")); writer->SetInput(guide); writer->Update();
+      }
+    RealImageType::Pointer viewLevelSet = guide;
+    double viewIso = -0.5;
+    if (RefineEdge(args, image, guide, -0.5, seed, "the segmentation", viewLevelSet, viewIso) != EXIT_SUCCESS) return EXIT_FAILURE;
+    return ViewAndMeasure(args, image, viewLevelSet, viewIso);
+    }
+  if (!args.GetOptionWasSet("Seeds"))
+    {
+    std::cerr << "Seeds are required (unless RefineSegmentation is given)." << std::endl;
+    args.ListOptionsSimplified();
+    return EXIT_FAILURE;
+    }
 
   // Optional recursive Gaussian smoothing of the CT, used for segmentation only
   // (the visualization and screenshots show the unsmoothed CT).
@@ -364,6 +553,39 @@ int main( int argc, char * argv[] )
     writer->Update();
     }
 
+  // Optional sub-voxel edge refinement; the view then shows (and measures) the refined surface
+  RealImageType::Pointer viewLevelSet = seg->GetOutput();
+  double viewIso = args.GetValueAsFloat("LevelSetIsoValue");
+  if (args.GetValueAsBool("RefineEdge"))
+    {
+    RealImageType::Pointer guide = seg->GetOutput();
+    double guideIso = args.GetValueAsFloat("LevelSetIsoValue");
+    std::string guideName = "LSTK's level set";
+    if (!args.GetValueAsString("RefineGuideImage").empty())
+      {
+      // the guide segmentation, linearly resampled onto LSTK's level set grid
+      try { guide = SegmentationAsLevelSet(args.GetValueAsString("RefineGuideImage"), seg->GetOutput(), 0, 0); }
+      catch (itk::ExceptionObject & e) { std::cerr << "Reading RefineGuideImage: " << e << std::endl; return EXIT_FAILURE; }
+      if (!guide)
+        {
+        std::cerr << "RefineGuideImage " << args.GetValueAsString("RefineGuideImage") << " is empty." << std::endl;
+        return EXIT_FAILURE;
+        }
+      guideIso = -0.5; guideName = "the guide";
+      std::cout << "Refined edge: guided by " << args.GetValueAsString("RefineGuideImage") << " instead of LSTK's level set" << std::endl;
+      }
+    if (RefineEdge(args, image, guide, guideIso, args.GetSeeds()[0].GetPositionInObjectSpace(), guideName, viewLevelSet, viewIso) != EXIT_SUCCESS)
+      return EXIT_FAILURE;
+    }
+
+  return ViewAndMeasure(args, image, viewLevelSet, viewIso);
+}
+
+// --------------------------------------------------------------------------
+static int ViewAndMeasure(LesionSegmentationCLI & args, LesionSegmentationCLI::InputImageType * image,
+                          GuideImageType * viewLevelSet, double viewIso)
+{
+  typedef LesionSegmentationCLI::InputImageType InputImageType;
   // View and Compute volume
 	const bool visualize = args.GetOptionWasSet("Visualize");
 	if (visualize)
@@ -383,7 +605,7 @@ int main( int argc, char * argv[] )
 			const double r = atof((it++)->c_str()), g = atof((it++)->c_str()), b = atof(it->c_str());
 			view->SetSegmentationColor(r, g, b);
 		}
-		view->SetSegmentationSurfaceFromLevelSet(seg->GetOutput(), -0.5);
+		view->SetSegmentationSurfaceFromLevelSet(viewLevelSet, viewIso);
 		view->SetSegmentationRenderMode(args.GetOptionWasSet("Outline") ?
 			itk::VTKViewImageAndSegmentation::SegmentationRenderMode::Outline :
 			itk::VTKViewImageAndSegmentation::SegmentationRenderMode::Surface);

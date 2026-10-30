@@ -57,14 +57,21 @@ public:
     this->AddArgument("SegmentationColor", false, "RGB (0-1) of the rendered nodule surface and its cut outline, e.g. --SegmentationColor 3 0.75 0.35 0.35. Default orange-red 1.0 0.353 0.122.", MetaCommand::LIST);
     this->AddArgument("CannyUpperThreshold", false, "Upper hysteresis threshold (gradient magnitude, HU/mm) of the Canny edge feature. Default 150.", MetaCommand::FLOAT, "150");
     this->AddArgument("CannyLowerThreshold", false, "Lower hysteresis threshold (gradient magnitude, HU/mm) of the Canny edge feature. Default 75.", MetaCommand::FLOAT, "75");
+    this->AddArgument("LevelSetIsoValue", false, "Iso-value of the output level set taken as the lesion surface, for the volume and the view. LSTK's default is -0.5 (half a 0.2 mm voxel outside the zero level set, which is the level set's own front); 0 is the front itself.", MetaCommand::FLOAT, "-0.5");
+    this->AddArgument("RefineEdge", false, "On by default: after the level set, refine the surface to the sub-voxel edge: the half-max (FWHM) surface of the CT between the lesion and lung levels, then corrected for blur on curved edges. Prints the refined volumes (see SubvoxelEdgeRefinement.h); the view, Volume measurement, OutputMesh and screenshots then use the refined surface. --RefineEdge 0 gives LSTK's level set alone, as before. OutputImage is always LSTK's level set.", MetaCommand::BOOL, "1");
+    this->AddArgument("PSFSigma", false, "Scanner PSF sigma in mm (x y z) for RefineEdge's blur correction, e.g. --PSFSigma 3 0.5 0.5 0.35. Estimated from the edge slopes if not given.", MetaCommand::LIST);
+    this->AddArgument("RefinedOutputImage", false, "RefineEdge: write the edge-corrected level set (surface at -0.5, same grid as OutputImage).");
+    this->AddArgument("RefineGuideImage", false, "RefineEdge: refine about this binary segmentation (nonzero inside; any resolution and orientation, in the CT's physical space) instead of LSTK's level set. It is resampled onto LSTK's level set grid. LSTK still runs and its level set is still written; the guide only replaces it as the refinement's starting region, lung shell and cut at attachments.");
+    this->AddArgument("RefineSegmentation", false, "Refine this binary segmentation (nonzero inside; any resolution and orientation, in the CT's physical space) without running LSTK: it is resampled (linear, its 0.5 contour) onto an isotropic grid of SupersampledIsotropicSpacing mm (default 0.2) around it, and refined as RefineEdge does. Seeds are optional (default: the point deepest inside the segmentation); the refinement keeps the part connected to the seed. OutputImage writes the resampled segmentation as a level set; RefinedOutputImage and FWHMOutputImage are on the same grid.");
+    this->AddArgument("FWHMOutputImage", false, "RefineEdge: write the FWHM level set (surface at -0.5, same grid as OutputImage).");
     this->AddArgument("SmoothingSigma", false, "Sigma (mm) of a recursive Gaussian applied to the CT before segmentation. 0 (default) = no smoothing.", MetaCommand::FLOAT, "0");
     this->AddArgument("ROI", false,
                       "Bounds of the ROI if any, 6 parameters as minX, maxX, minY, maxY, minZ, maxZ", MetaCommand::LIST);
     this->AddArgument("Sigma", false,
                       "Manually specify sigma. This is an array with 3 values in physical units. This defaults to the maximum spacing in the dataset, if unspecified",
                       MetaCommand::LIST);
-    this->AddArgument("Seeds", true,
-                      "Manually specify seeds in physical coordinates. At least one seed must be specified using for a segmentation to be generated. Usage is of the form --Seeds 3 X1 Y1 Z1 (for 1 seed) or --Seeds 6 X1 Y1 Z1 X2 Y2 Z2 (for 2 seeds) etc..",
+    this->AddArgument("Seeds", false,
+                      "Manually specify seeds in physical coordinates. At least one seed must be specified for a segmentation to be generated (with RefineSegmentation they are optional). Usage is of the form --Seeds 3 X1 Y1 Z1 (for 1 seed) or --Seeds 6 X1 Y1 Z1 X2 Y2 Z2 (for 2 seeds) etc..",
                       MetaCommand::LIST);
     this->AddArgument("SeedUnitsInPixels", false,
                       "Are the seeds specified in pixel coordinates ? (Note that pixel coords start at 0 index). If so, use this flag. By default seeds are assumed to be in physical coordinates.", MetaCommand::BOOL, "0");

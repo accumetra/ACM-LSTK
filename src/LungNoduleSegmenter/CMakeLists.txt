@@ -14,6 +14,7 @@ add_executable( LungNoduleSegmentation
   itkLesionSegmentationCommandLineProgressReporter.h
 	LungNoduleSegmentation.cpp
 	LesionSegmentationCLI.h
+	SubvoxelEdgeRefinement.h
 #	itkLungWallFeatureGenerator2.hxx
 #	itkLungWallFeatureGenerator2.h
 	../common/vtkCutPlaneWidget.h
